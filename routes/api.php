@@ -1,0 +1,86 @@
+<?php
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\CartController;
+
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register API routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "api" middleware group. Make something great!
+|
+*/
+
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user();
+});
+//AuthController
+Route::prefix("auth")->group(function (){
+    Route::get("",[AuthController::class,'getListUser'])->middleware('auth:api');
+    Route::put("/{id}",[AuthController::class,'updateUserInfo'])->middleware('auth:api');
+    Route::get("/{id}",[AuthController::class,'getUserInfo'])->middleware('auth:api');
+    Route::post("register",[AuthController::class,'registerUser']);
+    Route::post("login",[AuthController::class,'login']);
+});
+//Product controller
+Route::prefix("products")->group(function (){
+    Route::get("",[ProductController::class,'getAllProducts']);
+    Route::get("/{id}",[ProductController::class,'getProductById']);
+    Route::middleware('auth:api')->group(
+        function (){
+            Route::middleware(\App\Http\Middleware\AdminRole::class)->group(
+                function (){
+                    Route::put("/{id}",[ProductController::class,'updateProduct']);
+                    Route::delete("/{id}",[ProductController::class,'deleteProduct']);
+                    Route::post("",[ProductController::class,'createProduct']);
+                }
+            );
+        }
+    );
+//    Route::put("/{id}",[ProductController::class,'updateProduct']);
+//    Route::delete("/{id}",[ProductController::class,'deleteProduct']);
+//    Route::post("",[ProductController::class,'createProduct']);
+});
+Route::get('manufacturers',[ProductController::class,'getAllManufacturers']);
+Route::get('search',[ProductController::class,'searchProduct']);
+Route::prefix("carts")->group(function (){
+    Route::middleware('auth:api')->group(
+      function (){
+          Route::get("",[CartController::class,'getAllCarts']);
+//          Route::get("/{id}",[CartController::class,'getProductById']);
+          Route::put("/{id}",[CartController::class,'updateProduct']);
+          Route::delete("/{product_id}",[CartController::class,'deleteCart']);
+          Route::post("",[CartController::class,'addToCarts']);
+      }
+    );
+});
+//order controller
+Route::prefix("orders")->group(function (){
+    Route::middleware('auth:api')->group(
+        function (){
+            //lay tat ca don hang theo userid hoac neu la admin thi lay tat ca don hang
+            Route::get("",[\App\Http\Controllers\OrderController::class,'getAllOrders']);
+            Route::get("/{id}",[\App\Http\Controllers\OrderController::class,'getOrderByOderId']);
+            //cap nhat trang thai duyet hay tu choi danh cho admin
+            Route::put("/{id}",[\App\Http\Controllers\OrderController::class,'adminUpdateStatusOrder']);
+            Route::delete("/{product_id}",[CartController::class,'deleteCart']);
+            Route::post("",[\App\Http\Controllers\OrderController::class,'offlinePayment']);
+            Route::post("/{id}",[\App\Http\Controllers\OrderController::class,'onlinePayment']);
+        }
+    );
+});
+Route::prefix("online")->group( function (){
+    //update trạng thai da thanh toan va ma hoa don thanh thoan
+    Route::post("",[\App\Http\Controllers\OrderController::class,'updateInfoOrder'])->middleware('auth:api');
+});
+
+Route::get('success',function (Request $request){
+    return response()->json("success banking",200);
+});
+Route::get('banking',[\App\Http\Controllers\OrderController::class,'onlinePayment'])->middleware('auth:api');
